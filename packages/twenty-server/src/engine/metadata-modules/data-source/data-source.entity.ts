@@ -24,6 +24,27 @@ export class DataSourceEntity {
   url: string;
 
   @Column({ nullable: true })
+  host: string;
+
+  @Column({ nullable: true })
+  port: number;
+
+  @Column({ nullable: true })
+  username: string;
+
+  @Column({ nullable: true })
+  database: string;
+
+  @Column({ nullable: true })
+  useAzureManagedIdentity: boolean;
+
+  @Column({ nullable: true })
+  azureManagedIdentityClientId: string;
+
+  @Column({ nullable: true })
+  azureManagedIdentityTenantId: string;
+
+  @Column({ nullable: true })
   schema: string;
 
   @Column({ type: 'enum', enum: ['postgres'], default: 'postgres' })

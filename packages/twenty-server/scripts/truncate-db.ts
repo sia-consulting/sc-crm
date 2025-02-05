@@ -6,7 +6,9 @@ import { performQuery } from './utils';
 
 async function dropSchemasSequentially() {
   try {
-    await rawDataSource.initialize();
+    const dataSource = await rawDataSource();
+
+    await dataSource.initialize();
 
     // Fetch all schemas excluding the ones we want to keep
     const schemas = await performQuery(

@@ -1,15 +1,16 @@
 import { Logger } from '@nestjs/common';
 
-import { createClient } from 'redis';
 import RedisStore from 'connect-redis';
 import session from 'express-session';
 
 import { EnvironmentService } from 'src/engine/core-modules/environment/environment.service';
 import { CacheStorageType } from 'src/engine/core-modules/cache-storage/types/cache-storage-type.enum';
+import { RedisClientService } from 'src/engine/core-modules/redis-client/redis-client.service';
 
-export const getSessionStorageOptions = (
+export const getSessionStorageOptions = async (
   environmentService: EnvironmentService,
-): session.SessionOptions => {
+  redisService: RedisClientService,
+): Promise<session.SessionOptions> => {
   const cacheStorageType = environmentService.get('CACHE_STORAGE_TYPE');
 
   const SERVER_URL = environmentService.get('SERVER_URL');
@@ -42,13 +43,13 @@ export const getSessionStorageOptions = (
         );
       }
 
-      const redisClient = createClient({
-        url: connectionString,
-      });
+      const redisClient = await redisService.getClient();
 
-      redisClient.connect().catch((err) => {
-        throw new Error(`Redis connection failed: ${err}`);
-      });
+      if (!redisClient) {
+        throw new Error(
+          `${CacheStorageType.Redis} could not create sessionstorage client`,
+        );
+      }
 
       return {
         ...sessionStorage,

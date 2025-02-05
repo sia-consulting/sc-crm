@@ -32,7 +32,7 @@ export class DatabaseStructureService {
     schemaName: string,
     tableName: string,
   ): Promise<WorkspaceTableStructure[]> {
-    const mainDataSource = this.typeORMService.getMainDataSource();
+    const mainDataSource = await this.typeORMService.getMainDataSource();
     const results = await mainDataSource.query<
       WorkspaceTableStructureResult[]
     >(`
@@ -149,8 +149,10 @@ export class DatabaseStructureService {
     }));
   }
 
-  getPostgresDataTypes(fieldMetadata: FieldMetadataEntity): string[] {
-    const mainDataSource = this.typeORMService.getMainDataSource();
+  async getPostgresDataTypes(
+    fieldMetadata: FieldMetadataEntity,
+  ): Promise<string[]> {
+    const mainDataSource = await this.typeORMService.getMainDataSource();
 
     const normalizer = (
       type: FieldMetadataType,
@@ -198,10 +200,10 @@ export class DatabaseStructureService {
     ];
   }
 
-  getFieldMetadataTypeFromPostgresDataType(
+  async getFieldMetadataTypeFromPostgresDataType(
     postgresDataType: string,
-  ): FieldMetadataType | null {
-    const mainDataSource = this.typeORMService.getMainDataSource();
+  ): Promise<FieldMetadataType | null> {
+    const mainDataSource = await this.typeORMService.getMainDataSource();
     const types = Object.values(FieldMetadataType).filter((type) => {
       // We're skipping composite and relation types, as they're not directly mapped to a column type
       if (isCompositeFieldMetadataType(type)) {
@@ -231,7 +233,7 @@ export class DatabaseStructureService {
     return null;
   }
 
-  getPostgresDefaults(
+  async getPostgresDefaults(
     fieldMetadataType: FieldMetadataType,
     initialDefaultValue:
       | FieldMetadataDefaultValue
@@ -239,8 +241,8 @@ export class DatabaseStructureService {
       // TODO: Should be removed once all default values are migrated
       | { type: FieldMetadataDefaultValueFunctionNames }
       | null,
-  ): (string | null | undefined)[] {
-    const normalizer = (
+  ): Promise<(string | null | undefined)[]> {
+    const normalizer = async (
       type: FieldMetadataType,
       defaultValue:
         | FieldMetadataDefaultValue
@@ -248,7 +250,7 @@ export class DatabaseStructureService {
         | null,
     ) => {
       const typeORMType = fieldMetadataTypeToColumnType(type) as ColumnType;
-      const mainDataSource = this.typeORMService.getMainDataSource();
+      const mainDataSource = await this.typeORMService.getMainDataSource();
 
       let value: any =
         // Old formart default values
@@ -298,17 +300,19 @@ export class DatabaseStructureService {
         );
       }
 
-      return compositeType.properties.map((compositeProperty) =>
-        normalizer(
-          compositeProperty.type,
-          typeof initialDefaultValue === 'object'
-            ? initialDefaultValue?.[compositeProperty.name]
-            : null,
+      return await Promise.all(
+        compositeType.properties.map((compositeProperty) =>
+          normalizer(
+            compositeProperty.type,
+            typeof initialDefaultValue === 'object'
+              ? initialDefaultValue?.[compositeProperty.name]
+              : null,
+          ),
         ),
       );
     }
 
-    return [normalizer(fieldMetadataType, initialDefaultValue)];
+    return [await normalizer(fieldMetadataType, initialDefaultValue)];
   }
 
   private computeFunctionDefaultValue(

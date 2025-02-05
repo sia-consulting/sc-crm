@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 import { EntitySchema } from 'typeorm';
+import { DefaultAzureCredential } from '@azure/identity';
+import { Client } from 'pg';
 
 import { EnvironmentService } from 'src/engine/core-modules/environment/environment.service';
 import { DataSourceService } from 'src/engine/metadata-modules/data-source/data-source.service';
@@ -13,6 +15,10 @@ import {
 import { EntitySchemaFactory } from 'src/engine/twenty-orm/factories/entity-schema.factory';
 import { CacheManager } from 'src/engine/twenty-orm/storage/cache-manager.storage';
 import { WorkspaceCacheStorageService } from 'src/engine/workspace-cache-storage/workspace-cache-storage.service';
+import { DataSourceEntity } from 'src/engine/metadata-modules/data-source/data-source.entity';
+import { extractUsernameFromToken } from 'src/engine/utils/azure.util';
+
+let azureCredential: DefaultAzureCredential | undefined;
 
 @Injectable()
 export class WorkspaceDatasourceFactory {
@@ -28,6 +34,18 @@ export class WorkspaceDatasourceFactory {
     private readonly entitySchemaFactory: EntitySchemaFactory,
   ) {
     this.cachedDatasourcePromise = {};
+    azureCredential = environmentService.get(
+      'PG_DATABASE_USE_AZURE_MANAGED_IDENTITY',
+    )
+      ? new DefaultAzureCredential({
+          tenantId:
+            environmentService.get('AZURE_MANAGED_IDENTITY_TENANT_ID') ||
+            environmentService.get('PG_AZURE_MANAGED_IDENTITY_TENANT_ID'),
+          managedIdentityClientId:
+            environmentService.get('AZURE_MANAGED_IDENTITY_CLIENT_ID') ||
+            environmentService.get('PG_AZURE_MANAGED_IDENTITY_CLIENT_ID'),
+        })
+      : undefined;
   }
 
   public async create(
@@ -130,21 +148,17 @@ export class WorkspaceDatasourceFactory {
                 workspaceId,
                 objectMetadataMaps: cachedObjectMetadataMaps,
               },
+              //@ts-expect-error - TypeORM TypeDef are incorrect, see https://github.com/typeorm/typeorm/issues/6350#issuecomment-2431151266
               {
-                url:
-                  dataSourceMetadata.url ??
-                  this.environmentService.get('PG_DATABASE_URL'),
+                ...(await this.getWorkspaceDataSourceFromMetadata(
+                  dataSourceMetadata,
+                )),
                 type: 'postgres',
                 logging: this.environmentService.get('DEBUG_MODE')
                   ? ['query', 'error']
                   : ['error'],
                 schema: dataSourceMetadata.schema,
                 entities: cachedEntitySchemas,
-                ssl: this.environmentService.get('PG_SSL_ALLOW_SELF_SIGNED')
-                  ? {
-                      rejectUnauthorized: false,
-                    }
-                  : undefined,
               },
             );
 
@@ -226,5 +240,65 @@ export class WorkspaceDatasourceFactory {
     }
 
     return latestWorkspaceMetadataVersion;
+  }
+
+  private async getWorkspaceDataSourceFromMetadata(
+    workspaceMetadata: DataSourceEntity,
+  ) {
+    const azureAccessToken = azureCredential
+      ? await azureCredential.getToken(
+          'https://ossrdbms-aad.database.windows.net/.default',
+        )
+      : undefined;
+
+    return azureAccessToken?.token
+      ? {
+          password: azureAccessToken.token,
+          username:
+            workspaceMetadata.username ||
+            extractUsernameFromToken(azureAccessToken, 'upn'),
+          database:
+            workspaceMetadata.database ||
+            this.environmentService.get('PG_DATABASE_NAME'),
+          host:
+            workspaceMetadata.host ||
+            this.environmentService.get('PG_DATABASE_HOST'),
+          port:
+            (workspaceMetadata.port as number | undefined) ||
+            (this.environmentService.get('PG_DATABASE_PORT') as
+              | number
+              | undefined) ||
+            5432,
+          ssl: true,
+          //TypeORM TypeDef are incorrect, see https://github.com/typeorm/typeorm/issues/6350#issuecomment-2431151266
+          poolErrorHandler: async (error, client: Client) => {
+            if (azureCredential) {
+              const azureAccessToken = await azureCredential.getToken(
+                'https://ossrdbms-aad.database.windows.net/.default',
+              );
+
+              client.user = extractUsernameFromToken(azureAccessToken, 'upn');
+              client.password = azureAccessToken?.token;
+
+              await client.connect((connectionError) => {
+                if (connectionError) {
+                  throw connectionError;
+                }
+              });
+            } else {
+              throw error;
+            }
+          },
+        }
+      : {
+          url:
+            workspaceMetadata.url ??
+            this.environmentService.get('PG_DATABASE_URL'),
+          ssl: this.environmentService.get('PG_SSL_ALLOW_SELF_SIGNED')
+            ? {
+                rejectUnauthorized: false,
+              }
+            : undefined,
+        };
   }
 }

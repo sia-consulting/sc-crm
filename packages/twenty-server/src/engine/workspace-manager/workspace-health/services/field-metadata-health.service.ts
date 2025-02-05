@@ -71,7 +71,7 @@ export class FieldMetadataHealthService {
     const issues: WorkspaceHealthIssue[] = [];
 
     if (options.mode === 'structure' || options.mode === 'all') {
-      const structureIssues = this.structureFieldCheck(
+      const structureIssues = await this.structureFieldCheck(
         tableName,
         workspaceTableColumns,
         fieldMetadata,
@@ -89,13 +89,13 @@ export class FieldMetadataHealthService {
     return issues;
   }
 
-  private structureFieldCheck(
+  private async structureFieldCheck(
     tableName: string,
     workspaceTableColumns: WorkspaceTableStructure[],
     fieldMetadata: FieldMetadataEntity,
-  ): WorkspaceHealthIssue[] {
+  ): Promise<WorkspaceHealthIssue[]> {
     const dataTypes =
-      this.databaseStructureService.getPostgresDataTypes(fieldMetadata);
+      await this.databaseStructureService.getPostgresDataTypes(fieldMetadata);
     const issues: WorkspaceHealthIssue[] = [];
     let columnNames: string[] = [];
 
@@ -113,10 +113,11 @@ export class FieldMetadataHealthService {
       columnNames = [computeColumnName(fieldMetadata)];
     }
 
-    const defaultValues = this.databaseStructureService.getPostgresDefaults(
-      fieldMetadata.type,
-      fieldMetadata.defaultValue,
-    );
+    const defaultValues =
+      await this.databaseStructureService.getPostgresDefaults(
+        fieldMetadata.type,
+        fieldMetadata.defaultValue,
+      );
 
     // Check if column exist in database
     const columnStructureMap = workspaceTableColumns.reduce(

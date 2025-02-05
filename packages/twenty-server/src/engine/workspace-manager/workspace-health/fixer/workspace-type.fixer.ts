@@ -57,7 +57,7 @@ export class WorkspaceTypeFixer extends AbstractWorkspaceFixer<WorkspaceHealthIs
       }
 
       const type =
-        this.databaseStructureService.getFieldMetadataTypeFromPostgresDataType(
+        await this.databaseStructureService.getFieldMetadataTypeFromPostgresDataType(
           dataType,
         );
 

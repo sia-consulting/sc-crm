@@ -12,7 +12,7 @@ export const performQuery = async (
   ignoreAlreadyExistsError = false,
 ) => {
   try {
-    const result = await rawDataSource.query(query);
+    const result = await (await rawDataSource()).query(query);
 
     withLog && console.log(`Performed '${consoleDescription}' successfully`);
 

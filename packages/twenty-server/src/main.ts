@@ -19,6 +19,7 @@ import './instrument';
 
 import { settings } from './engine/constants/settings';
 import { generateFrontConfig } from './utils/generate-front-config';
+import { RedisClientService } from './engine/core-modules/redis-client/redis-client.service';
 
 const bootstrap = async () => {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -37,8 +38,11 @@ const bootstrap = async () => {
   });
   const logger = app.get(LoggerService);
   const environmentService = app.get(EnvironmentService);
+  const redisService = app.get(RedisClientService);
 
-  app.use(session(getSessionStorageOptions(environmentService)));
+  app.use(
+    session(await getSessionStorageOptions(environmentService, redisService)),
+  );
 
   // TODO: Double check this as it's not working for now, it's going to be helpful for durable trees in twenty "orm"
   // // Apply context id strategy for durable trees

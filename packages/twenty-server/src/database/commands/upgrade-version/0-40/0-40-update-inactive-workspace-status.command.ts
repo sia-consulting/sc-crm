@@ -89,7 +89,7 @@ export class UpdateInactiveWorkspaceStatusCommand extends BaseCommandRunner {
       ),
     );
 
-    await rawDataSource.initialize();
+    await (await rawDataSource()).initialize();
 
     for (const workspace of workspaces) {
       this.logger.log(
@@ -104,11 +104,11 @@ export class UpdateInactiveWorkspaceStatusCommand extends BaseCommandRunner {
 
       const schemaName = datasource?.schema;
 
-      const postgresSchemaExists = await this.typeORMService
-        .getMainDataSource()
-        .query(
-          `SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = '${schemaName}'`,
-        );
+      const postgresSchemaExists = await (
+        await this.typeORMService.getMainDataSource()
+      ).query(
+        `SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name = '${schemaName}'`,
+      );
 
       if (!schemaName || !postgresSchemaExists) {
         await this.deleteWorkspaceAndMarkAsSuspended(workspace, options);
@@ -228,9 +228,9 @@ export class UpdateInactiveWorkspaceStatusCommand extends BaseCommandRunner {
         }
       }
 
-      await this.typeORMService
-        .getMainDataSource()
-        .query(`DROP SCHEMA IF EXISTS ${schemaName} CASCADE`);
+      await (
+        await this.typeORMService.getMainDataSource()
+      ).query(`DROP SCHEMA IF EXISTS ${schemaName} CASCADE`);
     }
   }
 

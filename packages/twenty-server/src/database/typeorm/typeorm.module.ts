@@ -1,20 +1,20 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 
-import { typeORMCoreModuleOptions } from 'src/database/typeorm/core/core.datasource';
+import { getTypeORMCoreModuleOptions } from 'src/database/typeorm/core/core.datasource';
 import { EnvironmentModule } from 'src/engine/core-modules/environment/environment.module';
 
 import { TypeORMService } from './typeorm.service';
 
-import { typeORMMetadataModuleOptions } from './metadata/metadata.datasource';
+import { getTypeORMMetadataModuleOptions } from './metadata/metadata.datasource';
 
 const metadataTypeORMFactory = async (): Promise<TypeOrmModuleOptions> => ({
-  ...typeORMMetadataModuleOptions,
+  ...(await getTypeORMMetadataModuleOptions()),
   name: 'metadata',
 });
 
 const coreTypeORMFactory = async (): Promise<TypeOrmModuleOptions> => ({
-  ...typeORMCoreModuleOptions,
+  ...(await getTypeORMCoreModuleOptions()),
   name: 'core',
 });
 

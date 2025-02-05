@@ -94,11 +94,13 @@ export class DataSeedWorkspaceCommand extends CommandRunner {
   async createWorkspaceSchema(workspaceId: string) {
     await this.workspaceSchemaCache.flush();
 
-    await rawDataSource.initialize();
+    const dataSource = await rawDataSource();
 
-    await seedCoreSchema(rawDataSource, workspaceId);
+    await dataSource.initialize();
 
-    await rawDataSource.destroy();
+    await seedCoreSchema(dataSource, workspaceId);
+
+    await dataSource.destroy();
 
     const schemaName =
       await this.workspaceDataSourceService.createWorkspaceDBSchema(

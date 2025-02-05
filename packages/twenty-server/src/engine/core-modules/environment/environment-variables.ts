@@ -122,6 +122,7 @@ export class EnvironmentVariables {
   PORT = 3000;
 
   // Database
+  @ValidateIf((env) => !env.PG_DATABASE_USE_AZURE_MANAGED_IDENTITY)
   @IsDefined()
   @IsUrl({
     protocols: ['postgres'],
@@ -130,6 +131,60 @@ export class EnvironmentVariables {
     require_host: false,
   })
   PG_DATABASE_URL: string;
+
+  @CastToBoolean()
+  @IsBoolean()
+  @IsOptional()
+  PG_DATABASE_USE_AZURE_MANAGED_IDENTITY = false;
+
+  @ValidateIf(
+    (env) =>
+      env.PG_DATABASE_USE_AZURE_MANAGED_IDENTITY &&
+      !env.AZURE_MANAGED_IDENTITY_CLIENT_ID,
+  )
+  @IsDefined()
+  @IsString()
+  PG_AZURE_MANAGED_IDENTITY_CLIENT_ID: string;
+
+  @IsOptional()
+  @IsString()
+  PG_AZURE_MANAGED_IDENTITY_TENANT_ID: string;
+
+  @ValidateIf((env) => env.PG_DATABASE_USE_AZURE_MANAGED_IDENTITY)
+  @IsString()
+  @IsDefined()
+  PG_DATABASE_NAME: string;
+
+  @ValidateIf((env) => env.PG_DATABASE_USE_AZURE_MANAGED_IDENTITY)
+  @IsString()
+  @IsDefined()
+  PG_DATABASE_SCHEMA: string;
+
+  @ValidateIf((env) => env.PG_DATABASE_USE_AZURE_MANAGED_IDENTITY)
+  @IsString()
+  @IsDefined()
+  PG_DATABASE_HOST: string;
+
+  @ValidateIf((env) => env.PG_DATABASE_USE_AZURE_MANAGED_IDENTITY)
+  @IsDefined()
+  @IsNumber()
+  @CastToPositiveNumber()
+  PG_DATABASE_PORT = 5432;
+
+  @ValidateIf(
+    (env) =>
+      (env.PG_DATABASE_USE_AZURE_MANAGED_IDENTITY &&
+        !env.PG_AZURE_MANAGED_IDENTITY_CLIENT_ID) ||
+      (env.REDIS_USE_AZURE_MANAGED_IDENTITY &&
+        !env.REDIS_AZURE_MANAGED_IDENTITY_CLIENT_ID),
+  )
+  @IsDefined()
+  @IsString()
+  AZURE_MANAGED_IDENTITY_CLIENT_ID: string;
+
+  @IsOptional()
+  @IsString()
+  AZURE_MANAGED_IDENTITY_TENANT_ID: string;
 
   @CastToBoolean()
   @IsBoolean()
@@ -420,11 +475,29 @@ export class EnvironmentVariables {
       env.MESSAGE_QUEUE_TYPE === MessageQueueDriverType.BullMQ,
   )
   @IsUrl({
-    protocols: ['redis'],
+    protocols: ['redis', 'rediss'],
     require_tld: false,
     allow_underscores: true,
   })
   REDIS_URL: string;
+
+  @CastToBoolean()
+  @IsBoolean()
+  @IsOptional()
+  REDIS_USE_AZURE_MANAGED_IDENTITY = false;
+
+  @ValidateIf(
+    (env) =>
+      env.REDIS_USE_AZURE_MANAGED_IDENTITY &&
+      !env.AZURE_MANAGED_IDENTITY_CLIENT_ID,
+  )
+  @IsDefined()
+  @IsString()
+  REDIS_AZURE_MANAGED_IDENTITY_CLIENT_ID: string;
+
+  @IsOptional()
+  @IsString()
+  REDIS_AZURE_MANAGED_IDENTITY_TENANT_ID: string;
 
   SHORT_TERM_TOKEN_EXPIRES_IN = '5m';
 

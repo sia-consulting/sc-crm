@@ -28,7 +28,9 @@ export class DataSeedDemoWorkspaceService {
 
   async seedDemo(): Promise<void> {
     try {
-      await rawDataSource.initialize();
+      const dataSource = await rawDataSource();
+
+      await dataSource.initialize();
       const demoWorkspaceIds =
         this.environmentService.get('DEMO_WORKSPACE_IDS');
 
@@ -47,10 +49,10 @@ export class DataSeedDemoWorkspaceService {
 
         if (existingWorkspaces.length > 0) {
           await this.workspaceManagerService.delete(workspaceId);
-          await deleteCoreSchema(rawDataSource, workspaceId);
+          await deleteCoreSchema(dataSource, workspaceId);
         }
 
-        await seedCoreSchema(rawDataSource, workspaceId);
+        await seedCoreSchema(dataSource, workspaceId);
         await this.workspaceManagerService.initDemo(workspaceId);
       }
     } catch (error) {

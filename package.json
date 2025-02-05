@@ -6,6 +6,7 @@
     "@aws-sdk/client-lambda": "^3.614.0",
     "@aws-sdk/client-s3": "^3.363.0",
     "@aws-sdk/credential-providers": "^3.363.0",
+    "@azure/identity": "^4.6.0",
     "@blocknote/mantine": "^0.22.0",
     "@blocknote/react": "^0.22.0",
     "@blocknote/server-util": "0.17.1",

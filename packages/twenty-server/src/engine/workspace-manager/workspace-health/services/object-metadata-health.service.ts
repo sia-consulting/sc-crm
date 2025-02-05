@@ -50,7 +50,7 @@ export class ObjectMetadataHealthService {
     schemaName: string,
     objectMetadata: ObjectMetadataEntity,
   ): Promise<WorkspaceHealthIssue[]> {
-    const mainDataSource = this.typeORMService.getMainDataSource();
+    const mainDataSource = await this.typeORMService.getMainDataSource();
     const issues: WorkspaceHealthIssue[] = [];
 
     // Check if the table exist in database
